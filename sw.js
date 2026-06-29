@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rim-face-v2';
+const CACHE_NAME = 'rim-face-v3';
 const urlsToCache = [
   './index.html',
   './manifest.json',
