@@ -3,13 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calib Rim/Face Pro v5</title>
+    <title>Calib Rim/Face</title>
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#3498db">
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; color: #333; line-height: 1.6; padding: 15px; margin: 0; }
         .container { max-width: 680px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        h2 { text-align: center; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-top: 0; font-size: 1.5em; }
+        
+        /* Chỉnh kiểu dáng cho Tiêu đề và Nhãn Version */
+        h2 { text-align: center; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 15px; margin-top: 0; font-size: 1.6em; display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap;}
+        .version-badge { font-size: 0.55em; background-color: #e8f4f8; color: #2980b9; padding: 4px 10px; border-radius: 12px; font-weight: bold; border: 1px solid #bde0fe; letter-spacing: 0.5px;}
+        
         .section-title { background: #34495e; color: #fff; padding: 8px 12px; border-radius: 4px; font-size: 1.1em; margin-top: 25px; margin-bottom: 15px; }
         .form-group { margin-bottom: 15px; }
         label { display: block; font-weight: bold; margin-bottom: 5px; color: #34495e; font-size: 0.95em; }
@@ -68,7 +72,7 @@
 <body>
 
 <div class="container">
-    <h2>Cân Tâm Pro v5 (Thermal & ANSI)</h2>
+    <h2>Calib Rim/Face <span class="version-badge">version: 5</span></h2>
     
     <div class="section-title">I. Cấu hình thiết bị & Khớp nối</div>
     
@@ -104,11 +108,11 @@
             <p>Hệ số giãn nở áp dụng: 0.011 mm/m/°C (Thép/Gang đúc). Tính toán bù trừ mặt phẳng Đứng.</p>
             <div style="display: flex; gap: 10px; margin-bottom: 10px;">
                 <div style="flex: 1;"><label>Máy TĨNH - H (mm)</label><input type="number" id="hStat" placeholder="Cao tâm H1"></div>
-                <div style="flex: 1;"><label>Máy TĨNH - ΔT (°C)</label><input type="number" id="dtStat" placeholder="Độ tăng nhiệt độ"></div>
+                <div style="flex: 1;"><label>Máy TĨNH - ΔT (°C)</label><input type="number" id="dtStat" placeholder="Độ tăng nhiệt"></div>
             </div>
             <div style="display: flex; gap: 10px;">
                 <div style="flex: 1;"><label>Máy ĐỘNG - H (mm)</label><input type="number" id="hMtbm" placeholder="Cao tâm H2"></div>
-                <div style="flex: 1;"><label>Máy ĐỘNG - ΔT (°C)</label><input type="number" id="dtMtbm" placeholder="Độ tăng nhiệt độ"></div>
+                <div style="flex: 1;"><label>Máy ĐỘNG - ΔT (°C)</label><input type="number" id="dtMtbm" placeholder="Độ tăng nhiệt"></div>
             </div>
         </div>
     </div>
@@ -217,7 +221,7 @@
         // 2. KHUYẾN CÁO KHỚP NỐI
         let advPanel = document.getElementById("couplingAdvice");
         if (cplType === "rigid") {
-            advPanel.innerHTML = "⚠️ <strong>Khớp nối cứng (Rigid):</strong> Đòi hỏi độ chính xác căn chỉnh tuyệt đối. Bắt buộc triệt tiêu toàn bộ Tỷ lệ dốc (Angularity) để ngăn chặn Bending Moment bẻ gãy đầu trục hoặc phá hủy vòng bi.";
+            advPanel.innerHTML = "⚠️ <strong>Khớp nối cứng (Rigid):</strong> Đòi hỏi độ chính xác căn chỉnh tuyệt đối. Bắt buộc triệt tiêu toàn bộ Tỷ lệ dốc (Angularity) để ngăn chặn Bending Moment bẻ gãy đầu trục.";
         } else if (cplType === "gear") {
             advPanel.innerHTML = "⚙️ <strong>Khớp nối răng (Gear):</strong> Có khả năng hấp thụ trượt dọc trục tốt. Đảm bảo bôi trơn mỡ chịu áp cao và duy trì chính xác khoảng cách mặt bích (DBSE).";
         } else {
@@ -237,7 +241,7 @@
             let expStat = hStat * 0.000011 * dtStat;
             let expMtbm = hMtbm * 0.000011 * dtMtbm;
             
-            // Lượng Offset mục tiêu: MTBM cần đặt cao hơn STAT bao nhiêu lúc nguội
+            // Lượng Offset mục tiêu
             targetOffsetV = expStat - expMtbm; 
             
             thermalPanel.innerHTML = `🔥 Mục tiêu (Cold Target): Gài chân Động cơ CAO HƠN ${targetOffsetV.toFixed(3)} mm để bù trừ lúc nóng.`;
@@ -261,8 +265,8 @@
         if (setup === "MTBM") { rTIR_V *= -1; fTIR_V *= -1; rTIR_H *= -1; fTIR_H *= -1; }
 
         // 5. TÍNH TOÁN ĐỘ LỆCH VÀ SHIM
-        let offsetV_Meas = rTIR_V / 2; // Offset thực đo
-        let effectiveOffsetV = offsetV_Meas - targetOffsetV; // Offset vận hành sau khi bù nhiệt
+        let offsetV_Meas = rTIR_V / 2;
+        let effectiveOffsetV = offsetV_Meas - targetOffsetV;
         let angV = fTIR_V / D;
         let ang100V = angV * 100;
         
