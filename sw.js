@@ -13,9 +13,25 @@ self.addEventListener('install', event => {
         return cache.addAll(urlsToCache);
       })
   );
+  self.skipWaiting(); // Ép service worker mới cài đặt ngay lập tức
 });
 
-// Trả về file từ cache nếu không có mạng
+// Xóa cache cũ khi có phiên bản mới
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys().then(cacheNames => {
+      return Promise.all(
+        cacheNames.map(cacheName => {
+          if (cacheName !== CACHE_NAME) {
+            return caches.delete(cacheName); // Xóa các bản v1, v2, v3, v4 cũ
+          }
+        })
+      );
+    })
+  );
+});
+
+// Trả về file từ cache hoặc tải mới từ mạng
 self.addEventListener('fetch', event => {
   event.respondWith(
     caches.match(event.request)
