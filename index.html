@@ -37,11 +37,18 @@
         
         /* Kết quả hiện tại */
         .result-container { display: none; margin-top: 20px; }
-        .result-box { padding: 12px; margin-bottom: 10px; border-radius: 4px; }
+        .result-box { padding: 15px; margin-bottom: 15px; border-radius: 4px; }
         .result-v { background: #e8f8f5; border-left: 5px solid #1abc9c; }
         .result-h { background: #fef9e7; border-left: 5px solid #f1c40f; }
-        .result-box h3 { margin: 0 0 8px 0; font-size: 1.1em; }
+        .result-box h3 { margin: 0 0 10px 0; font-size: 1.2em; border-bottom: 1px solid rgba(0,0,0,0.1); padding-bottom: 5px;}
         
+        .status-badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 0.85em; font-weight: bold; margin-left: 10px; }
+        .status-pass { background: #2ecc71; color: white; }
+        .status-fail { background: #e74c3c; color: white; }
+        
+        .metric-row { display: flex; justify-content: space-between; margin-bottom: 5px; border-bottom: 1px dashed #ccc; padding-bottom: 5px; }
+        .action-row { margin-top: 10px; font-size: 1.05em; }
+
         /* Lịch sử */
         .history-list { margin-top: 15px; }
         .history-card { background: #f8f9fa; border: 1px solid #dee2e6; border-left: 5px solid #3498db; border-radius: 5px; padding: 12px; margin-bottom: 12px; }
@@ -61,11 +68,20 @@
 <div class="container">
     <h2>Calib Rim/Face</h2>
     
-    <div class="section-title">I. Thông tin thiết bị & Thông số cố định</div>
+    <div class="section-title">I. Cấu hình thiết bị & Tiêu chuẩn ANSI</div>
     
     <div class="form-group">
         <label>Tên thiết bị (Tag No.):</label>
         <input type="text" id="equipName" placeholder="VD: Bơm thủy lực CSU, Quạt ID Fan..." value="">
+    </div>
+
+    <div class="form-group">
+        <label>Tốc độ vòng quay (RPM) - Mức dung sai:</label>
+        <select id="rpmType">
+            <option value="1000">Chậm (750 - 1000 RPM)</option>
+            <option value="1800" selected>Trung bình (1500 - 1800 RPM)</option>
+            <option value="3600">Nhanh (3000 - 3600 RPM)</option>
+        </select>
     </div>
 
     <div class="form-group">
@@ -107,34 +123,52 @@
     </div>
     <div id="validityWarning" class="warning">⚠️ Cảnh báo: Quy tắc hợp lệ (12h+6h = 3h+9h) lệch > 0.05mm. Khuyến cáo quét lại đồng hồ!</div>
 
-    <button onclick="processAlignment()">TÍNH TOÁN & LƯU LỊCH SỬ</button>
+    <button onclick="processAlignment()">TÍNH TOÁN & ĐÁNH GIÁ ANSI</button>
 
     <div id="currentResult" class="result-container">
-        <h3 style="text-align: center; border-bottom: 2px dashed #ccc; padding-bottom: 10px;">ĐỀ XUẤT CHỈNH SỬA (LẦN NÀY)</h3>
+        <h3 style="text-align: center; border-bottom: 2px dashed #ccc; padding-bottom: 10px; color:#2c3e50;">BÁO CÁO CĂN CHỈNH & ĐỀ XUẤT</h3>
+        
         <div class="result-box result-v">
-            <h3 style="color:#16a085">1. Mặt phẳng Đứng (Shim)</h3>
-            <p id="resV_Front"></p>
-            <p id="resV_Back"></p>
+            <h3 style="color:#16a085">1. Mặt phẳng Đứng (Vertical)</h3>
+            <div class="metric-row">
+                <span>Độ lệch song song (Offset):</span>
+                <strong id="valOffsetV"></strong>
+            </div>
+            <div class="metric-row">
+                <span>Tỷ lệ dốc (Angularity):</span>
+                <strong id="valAngV"></strong>
+            </div>
+            <div class="action-row" id="resV_Front"></div>
+            <div class="action-row" id="resV_Back"></div>
         </div>
+        
         <div class="result-box result-h">
-            <h3 style="color:#d4ac0d">2. Mặt phẳng Ngang (Dịch ngang)</h3>
-            <p id="resH_Front"></p>
-            <p id="resH_Back"></p>
+            <h3 style="color:#d4ac0d">2. Mặt phẳng Ngang (Horizontal)</h3>
+            <div class="metric-row">
+                <span>Độ lệch song song (Offset):</span>
+                <strong id="valOffsetH"></strong>
+            </div>
+            <div class="metric-row">
+                <span>Tỷ lệ dốc (Angularity):</span>
+                <strong id="valAngH"></strong>
+            </div>
+            <div class="action-row" id="resH_Front"></div>
+            <div class="action-row" id="resH_Back"></div>
         </div>
     </div>
 
     <div class="section-title" style="background: #7f8c8d;">III. Lịch sử lưu trữ</div>
-    <div id="historyContainer" class="history-list">
-        </div>
+    <div id="historyContainer" class="history-list"></div>
     <button class="btn-danger" onclick="clearHistory()">XÓA TOÀN BỘ LỊCH SỬ</button>
 </div>
 
 <script>
-    let historyRecords = JSON.parse(localStorage.getItem('rimFaceHistoryV3')) || [];
+    let historyRecords = JSON.parse(localStorage.getItem('rimFaceHistoryV4')) || [];
     renderHistory();
 
     function processAlignment() {
         let equipName = document.getElementById("equipName").value.trim();
+        let rpm = parseInt(document.getElementById("rpmType").value);
         let setup = document.getElementById("setupType").value;
         let D = parseFloat(document.getElementById("diaFace").value);
         let L1 = parseFloat(document.getElementById("distL1").value);
@@ -151,6 +185,12 @@
             return;
         }
 
+        // Định mức dung sai ANSI S2.75 Acceptable
+        let tolOffset = 0, tolAng = 0;
+        if (rpm === 1000) { tolOffset = 0.13; tolAng = 0.10; }
+        else if (rpm === 1800) { tolOffset = 0.09; tolAng = 0.07; }
+        else if (rpm === 3600) { tolOffset = 0.04; tolAng = 0.04; }
+
         let getVal = id => parseFloat(document.getElementById(id).value) || 0;
         let r = { t: getVal("r12"), b: getVal("r6"), r: getVal("r3"), l: getVal("r9") };
         let f = { t: getVal("f12"), b: getVal("f6"), r: getVal("f3"), l: getVal("f9") };
@@ -166,34 +206,59 @@
             rTIR_V *= -1; fTIR_V *= -1; rTIR_H *= -1; fTIR_H *= -1;
         }
 
-        let shimF = (rTIR_V / 2) + ((fTIR_V / D) * L1);
-        let shimB = (rTIR_V / 2) + ((fTIR_V / D) * L2);
-        let moveF = (rTIR_H / 2) + ((fTIR_H / D) * L1);
-        let moveB = (rTIR_H / 2) + ((fTIR_H / D) * L2);
+        // TÍNH TOÁN ĐỘ LỆCH VÀ TỶ LỆ DỐC
+        let offset_V = rTIR_V / 2;
+        let ang_V = fTIR_V / D; // Dùng để tính shim
+        let ang100_V = ang_V * 100; // Quy chuẩn mm/100mm để hiển thị ANSI
 
-        document.getElementById("resV_Front").innerHTML = "Chân trước: " + fmtV(shimF);
-        document.getElementById("resV_Back").innerHTML = "Chân sau: " + fmtV(shimB);
-        document.getElementById("resH_Front").innerHTML = "Chân trước: " + fmtH(moveF);
-        document.getElementById("resH_Back").innerHTML = "Chân sau: " + fmtH(moveB);
+        let offset_H = rTIR_H / 2;
+        let ang_H = fTIR_H / D;
+        let ang100_H = ang_H * 100;
+
+        // ĐÁNH GIÁ ANSI
+        let statOffV = Math.abs(offset_V) <= tolOffset ? `<span class="status-badge status-pass">ĐẠT (≤${tolOffset})</span>` : `<span class="status-badge status-fail">LỆCH (≤${tolOffset})</span>`;
+        let statAngV = Math.abs(ang100_V) <= tolAng ? `<span class="status-badge status-pass">ĐẠT (≤${tolAng})</span>` : `<span class="status-badge status-fail">LỆCH (≤${tolAng})</span>`;
+        let statOffH = Math.abs(offset_H) <= tolOffset ? `<span class="status-badge status-pass">ĐẠT (≤${tolOffset})</span>` : `<span class="status-badge status-fail">LỆCH (≤${tolOffset})</span>`;
+        let statAngH = Math.abs(ang100_H) <= tolAng ? `<span class="status-badge status-pass">ĐẠT (≤${tolAng})</span>` : `<span class="status-badge status-fail">LỆCH (≤${tolAng})</span>`;
+
+        // TÍNH SHIM VÀ DỊCH CHUYỂN
+        let shimF = offset_V + (ang_V * L1);
+        let shimB = offset_V + (ang_V * L2);
+        let moveF = offset_H + (ang_H * L1);
+        let moveB = offset_H + (ang_H * L2);
+
+        // HIỂN THỊ GIAO DIỆN
+        document.getElementById("valOffsetV").innerHTML = `${offset_V.toFixed(3)} mm ${statOffV}`;
+        document.getElementById("valAngV").innerHTML = `${ang100_V.toFixed(3)} mm/100mm ${statAngV}`;
+        document.getElementById("resV_Front").innerHTML = "🔹 Chân trước: " + fmtV(shimF);
+        document.getElementById("resV_Back").innerHTML = "🔹 Chân sau: " + fmtV(shimB);
+
+        document.getElementById("valOffsetH").innerHTML = `${offset_H.toFixed(3)} mm ${statOffH}`;
+        document.getElementById("valAngH").innerHTML = `${ang100_H.toFixed(3)} mm/100mm ${statAngH}`;
+        document.getElementById("resH_Front").innerHTML = "🔹 Chân trước: " + fmtH(moveF);
+        document.getElementById("resH_Back").innerHTML = "🔹 Chân sau: " + fmtH(moveB);
+        
         document.getElementById("currentResult").style.display = "block";
 
-        // Logic đếm số lần căn chỉnh cho từng thiết bị riêng biệt
+        // LƯU LỊCH SỬ
         let sameEquipRecords = historyRecords.filter(rec => rec.equipment === equipName);
         let cycleNum = sameEquipRecords.length;
         let recordTitle = cycleNum === 0 ? "Thông số ban đầu" : `Căn chỉnh lần ${cycleNum}`;
+        
+        let isAllPass = (Math.abs(offset_V) <= tolOffset && Math.abs(ang100_V) <= tolAng && Math.abs(offset_H) <= tolOffset && Math.abs(ang100_H) <= tolAng);
         
         let newRecord = {
             equipment: equipName,
             title: recordTitle,
             time: new Date().toLocaleTimeString('vi-VN') + ' - ' + new Date().toLocaleDateString('vi-VN'),
-            rim: `6h: ${r.b} | 3h: ${r.r} | 9h: ${r.l}`,
-            face: `6h: ${f.b} | 3h: ${f.r} | 9h: ${f.l}`,
-            resV: `F: ${shimF.toFixed(2)} | B: ${shimB.toFixed(2)}`,
-            resH: `F: ${moveF.toFixed(2)} | B: ${moveB.toFixed(2)}`
+            rpmInfo: `${rpm} RPM`,
+            status: isAllPass ? '✅ HOÀN THÀNH (ĐẠT ANSI)' : '⚠️ ĐANG CĂN CHỈNH',
+            resV: `Offset: ${offset_V.toFixed(2)} | Ang: ${ang100_V.toFixed(2)}`,
+            resH: `Offset: ${offset_H.toFixed(2)} | Ang: ${ang100_H.toFixed(2)}`
         };
 
         historyRecords.push(newRecord);
-        localStorage.setItem('rimFaceHistoryV3', JSON.stringify(historyRecords));
+        localStorage.setItem('rimFaceHistoryV4', JSON.stringify(historyRecords));
         renderHistory();
         
         document.getElementById("currentResult").scrollIntoView({ behavior: 'smooth' });
@@ -204,7 +269,6 @@
         container.innerHTML = "";
         
         let reversedHistory = [...historyRecords].reverse();
-
         if (reversedHistory.length === 0) {
             container.innerHTML = "<p style='text-align:center; color:#95a5a6;'>Chưa có dữ liệu lịch sử.</p>";
             return;
@@ -216,16 +280,15 @@
                     <h4><span class="equip-name">[${rec.equipment}]</span> ${rec.title} 
                         <span style="font-size:0.8em; color:#7f8c8d; float:right;">🕒 ${rec.time}</span>
                     </h4>
+                    <p style="margin: 3px 0; font-weight: bold; color: ${rec.status.includes('✅') ? '#27ae60' : '#d35400'}">${rec.status} (${rec.rpmInfo})</p>
                     <div class="history-data">
                         <div class="history-col">
-                            <strong>Đo đạc (TIR):</strong><br>
-                            R: ${rec.rim}<br>
-                            F: ${rec.face}
+                            <strong>Đứng (Vertical):</strong><br>
+                            ${rec.resV}
                         </div>
                         <div class="history-col">
-                            <strong>Đề xuất chỉnh:</strong><br>
-                            Đứng (V): ${rec.resV}<br>
-                            Ngang (H): ${rec.resH}
+                            <strong>Ngang (Horizontal):</strong><br>
+                            ${rec.resH}
                         </div>
                     </div>
                 </div>
@@ -235,23 +298,23 @@
     }
 
     function clearHistory() {
-        if(confirm("Xác nhận XÓA TOÀN BỘ dữ liệu lịch sử của tất cả thiết bị? Hành động này không thể hoàn tác.")) {
+        if(confirm("Xác nhận XÓA TOÀN BỘ dữ liệu lịch sử của tất cả thiết bị?")) {
             historyRecords = [];
-            localStorage.removeItem('rimFaceHistoryV3');
+            localStorage.removeItem('rimFaceHistoryV4');
             renderHistory();
             document.getElementById("currentResult").style.display = "none";
         }
     }
 
     function fmtV(v) {
+        if (Math.abs(v) < 0.01) return `<strong>Đạt (Không chỉnh)</strong>`;
         if (v > 0) return `<span class="hl-add">THÊM ${v.toFixed(3)} mm shim</span>`;
-        if (v < 0) return `<span class="hl-rem">RÚT ${Math.abs(v).toFixed(3)} mm shim</span>`;
-        return `Đạt 0.000`;
+        return `<span class="hl-rem">RÚT ${Math.abs(v).toFixed(3)} mm shim</span>`;
     }
     function fmtH(v) {
-        if (v > 0) return `<span class="hl-r">DỊCH PHẢI (3h) ${v.toFixed(3)} mm</span>`;
-        if (v < 0) return `<span class="hl-l">DỊCH TRÁI (9h) ${Math.abs(v).toFixed(3)} mm</span>`;
-        return `Đạt 0.000`;
+        if (Math.abs(v) < 0.01) return `<strong>Đạt (Không chỉnh)</strong>`;
+        if (v > 0) return `<span class="hl-r">DỊCH PHẢI (hướng 3h) ${v.toFixed(3)} mm</span>`;
+        return `<span class="hl-l">DỊCH TRÁI (hướng 9h) ${Math.abs(v).toFixed(3)} mm</span>`;
     }
 </script>
 
